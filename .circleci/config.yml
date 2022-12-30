@@ -110,6 +110,5 @@ workflows:
     jobs:
       - amd64-ubuntu
       - arm64-ubuntu
-      - i386-ubuntu
       - arm64-macos
       - amd64-macos
