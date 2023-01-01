@@ -48,18 +48,10 @@ import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.UUID;
 import junit.framework.TestCase;
+import org.codehaus.plexus.archiver.tar.TarGZipUnArchiver;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.JniDB;
-import org.iq80.leveldb.DB;
-import org.iq80.leveldb.DBComparator;
-import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.DBIterator;
-import org.iq80.leveldb.Logger;
-import org.iq80.leveldb.Options;
-import org.iq80.leveldb.Range;
-import org.iq80.leveldb.ReadOptions;
-import org.iq80.leveldb.WriteBatch;
-import org.iq80.leveldb.WriteOptions;
+import org.iq80.leveldb.*;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -169,6 +161,39 @@ public class DBTest extends TestCase {
         iterator.close();
         assertEquals(expecting, actual);
 
+        db.close();
+    }
+
+    @Test
+    public void testIterator2() throws IOException, DBException {
+
+        final TarGZipUnArchiver ua = new TarGZipUnArchiver();
+        ua.setSourceFile(new File(getClass().getClassLoader()
+                .getResource("data/" + getName() + ".tgz").getFile()));
+        File file = new File("test-data");
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+        ua.setDestDirectory(new File("test-data"));
+        ua.extract();
+
+        Options options = new Options();
+        options.createIfMissing(false);
+        options.paranoidChecks(true);
+        options.verifyChecksums(true);
+        options.compressionType(CompressionType.SNAPPY);
+        options.blockSize(4 * 1024);
+        options.writeBufferSize(10 * 1024 * 1024);
+        options.cacheSize(10 * 1024 * 1024L);
+        options.maxOpenFiles(1000);
+        options.bitsPerKey(10);
+        File path = new File("test-data",getName());
+        DB db = factory.open(path, options);
+        DBIterator iterator = db.iterator();
+        for (iterator.seekToFirst(); iterator.hasNext(); iterator.next()) {
+            assertEquals(iterator.peekNext().getValue(), db.get(iterator.peekNext().getKey()));
+        }
+        iterator.close();
         db.close();
     }
 
